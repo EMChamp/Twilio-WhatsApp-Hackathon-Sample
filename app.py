@@ -22,22 +22,48 @@ def incoming_message():
 
 @app.route('/received_message_twiml', methods=['POST'])
 def response_received_message_twiml():
-    message_body_received = request.form['Body']
+    # Create TwiML objects
     response = MessagingResponse()
     message = Message()
-    message.body('Message Received! Your message was: ' + message_body_received)
+
+    # Set Reply message
+    message_body_received = request.form['Body']
+    if "location" in message_body_received:
+        message.body("Our office is located at 9 Straits View, Marina One.")
+    elif "time" in message_body_received:
+        message.body("Our office opens at 9AM and closes at 6PM.")
+    elif "exit" in message_body_received:
+        message.body("Goodbye!")
+    else:
+        message.body("Welcome to Twilio Singapore. \n"
+                     "Please reply with the following words to get more information\n"
+                     "- location\n"
+                     "- time\n"
+                     "- exit\n")
+
     response.append(message)
+
+    # Response with TwiML
     return str(response)
 
 @app.route('/received_message_studio', methods=['POST'])
 def response_received_message():
-    print(request.form['Body'])
+    # Create Twilio Client
     client = Client(account_sid, auth_token)
-    from_number = request.form['From'][9:] #Skip 'whatsapp:'
+
+    # Parse Message Body to Send to Studio
+    message_body_received = request.form['Body']
+    parameters = {'reply_message': message_body_received}
+
+    # Set To/From numbers
+    wa_sender_number = "whatsapp:" + request.form['From'][9:]
+    whatsapp_sandbox_number = "whatsapp:+14155238886"
+
+    # Execute studio flow w/ the Message Body as Parameter
     client.studio \
-        .flows('FWf8738d1bc2048114b99e2da6d1bd392b') \
+        .flows('FW4e0328e6706dec20203a525cf6c97144') \
         .executions \
-        .create(to=from_number, from_='+14083009148')
+        .create(to=wa_sender_number, from_=whatsapp_sandbox_number, parameters=parameters)
     return {}
 
 if __name__ == '__main__':
